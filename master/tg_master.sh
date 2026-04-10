@@ -72,6 +72,13 @@ while true; do
                 AGENT_IP=$(echo "$RAW_IP" | tr -cd 'a-zA-Z0-9.:\[\]-' | cut -c 1-50) # IP 格式限制
                 AGENT_PORT=$(echo "$RAW_PORT" | tr -cd '0-9' | cut -c 1-5) # 端口只能是数字
                 
+                # ================== [v3.0.2 紧急加固: SSRF 内网隔离墙] ==================
+                # 拒绝 127.x, 10.x, 192.168.x, 172.16~31.x 以及 IPv6 回环地址的注册
+                if [[ "$AGENT_IP" =~ ^127\.|^10\.|^192\.168\.|^172\.(1[6-9]|2[0-9]|3[0-1])\.|^::1$|^localhost$ ]]; then
+                    send_msg "$CHAT_ID" "⛔ **安全拦截**：禁止注册内网或回环 IP，防止 SSRF 攻击渗透。"
+                    continue
+                fi
+                
                 # 异常拦截：如果核心字段被过滤成了空值，说明是恶意请求，直接抛弃
                 if [ -z "$NODE_NAME" ] || [ -z "$AGENT_IP" ] || [ -z "$AGENT_PORT" ] || [ -z "$CHAT_ID" ]; then
                     send_msg "$CHAT_ID" "⛔ **安全拦截**：检测到非法注册载荷，请求已拒绝。"
@@ -99,7 +106,8 @@ while true; do
                     else
                         send_msg "$CHAT_ID" "📢 **司令部指令下达：正在召唤所有哨兵回传简报...**"
                         echo "$NODE_DATA" | while IFS='|' read -r NNAME AIP APORT; do
-                            curl -s -m 5 "http://${AIP}:${APORT}/trigger_report" > /dev/null &
+                            # [v3.0.2 紧急加固] 批量下发战报时，必须同步追加 ?auth 鉴权令牌，防止被 Agent 拒绝
+                            curl -s -m 5 "http://${AIP}:${APORT}/trigger_report?auth=${CHAT_ID}" > /dev/null &
                         done
                     fi
                     ;;
@@ -166,8 +174,8 @@ while true; do
                             send_msg "$CHAT_ID" "⏳ 正在向 \`$TARGET_NODE\` ($AGENT_IP) 下发 [$ACTION_TYPE] 指令，请稍候..."
                         fi
                         
-                        # 触发 Webhook
-                        RESPONSE=$(curl -s -m 5 "http://${AGENT_IP}:${AGENT_PORT}/trigger_${ACTION_TYPE}" || echo "FAILED")
+                        # 触发 Webhook(v3.0.2 避免DDoS攻击加固)
+                        RESPONSE=$(curl -s -m 5 "http://${AGENT_IP}:${AGENT_PORT}/trigger_${ACTION_TYPE}?auth=${CHAT_ID}" || echo "FAILED")
                         
                         # 结果判定
                         if [ "$RESPONSE" == "FAILED" ]; then
