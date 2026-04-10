@@ -48,8 +48,8 @@ get_random_coord() {
 }
 
 # --- [环境初始化] ---
-# 获取当前出口 IP 仅用于日志记录
-CURRENT_V4=$(curl -4 -m 10 -s https://api.ip.sb/ip || echo "获取IP失败")
+# [v3.0.2修复] 直接读取系统已锁定的锚点 IP，彻底杜绝“获取IP失败”及隧道偏移
+CURRENT_IP="${BIND_IP:-Unknown}"
 
 # 会话锁定：单次执行内使用固定的浏览器指纹
 SESSION_UA=${UA_POOL[$RANDOM % ${#UA_POOL[@]}]}
@@ -60,7 +60,7 @@ SESSION_BASE_LON=$(get_random_coord $BASE_LON 270)
 # 【核心升级】随机决定本次上网深度 (6 - 10 个复合动作，配合高频长效拉伸)
 TOTAL_ACTIONS=$((6 + RANDOM % 5))
 
-log "$MODULE_NAME" "INFO " "当前出网 IP: $CURRENT_V4"
+log "$MODULE_NAME" "INFO " "当前出网 IP: $CURRENT_IP"
 log "$MODULE_NAME" "INFO " "设备指纹锁定: ${SESSION_UA:0:45}..."
 log "$MODULE_NAME" "INFO " "虚拟驻留坐标: $SESSION_BASE_LAT, $SESSION_BASE_LON"
 
@@ -79,19 +79,19 @@ for ((i=1; i<=TOTAL_ACTIONS; i++)); do
     
     case $ACTION_TYPE in
         1) # 搜索行为
-            CODE=$(curl -4 -m 15 -s -L -o /dev/null -w "%{http_code}" -A "$SESSION_UA" \
+            CODE=$(curl -${IP_PREF:-4} -m 15 -s -L -o /dev/null -w "%{http_code}" -A "$SESSION_UA" \
                  "https://www.google.com/search?q=${ENCODED_KEY}&${LANG_PARAMS}")
             ;;
         2) # 浏览本土新闻
-            CODE=$(curl -4 -m 15 -s -L -o /dev/null -w "%{http_code}" -A "$SESSION_UA" \
+            CODE=$(curl -${IP_PREF:-4} -m 15 -s -L -o /dev/null -w "%{http_code}" -A "$SESSION_UA" \
                  "https://news.google.com/home?${LANG_PARAMS}")
             ;;
         3) # 地图坐标查询
-            CODE=$(curl -4 -m 15 -s -o /dev/null -w "%{http_code}" -A "$SESSION_UA" \
+            CODE=$(curl -${IP_PREF:-4} -m 15 -s -o /dev/null -w "%{http_code}" -A "$SESSION_UA" \
                  "https://www.google.com/maps/search/${ENCODED_KEY}/@${ACTION_LAT},${ACTION_LON},17z?${LANG_PARAMS}")
             ;;
         4) # 触发移动端系统底层位置检测像素
-            CODE=$(curl -4 -m 10 -s -o /dev/null -w "%{http_code}" -A "$SESSION_UA" \
+            CODE=$(curl -${IP_PREF:-4} -m 10 -s -o /dev/null -w "%{http_code}" -A "$SESSION_UA" \
                  "https://connectivitycheck.gstatic.com/generate_204")
             ;;
     esac
@@ -108,8 +108,8 @@ for ((i=1; i<=TOTAL_ACTIONS; i++)); do
 done
 
 # --- [结果纠偏自检] ---
-# 去掉所有语言参数，进行一次最干净的直连测试
-FINAL_URL=$(curl -4 -m 15 -s -L -o /dev/null -w "%{url_effective}" https://www.google.com)
+# 去掉所有语言参数，进行一次最干净的直连测试 (强制遵循锚点协议)
+FINAL_URL=$(curl -${IP_PREF:-4} -m 15 -s -L -o /dev/null -w "%{url_effective}" https://www.google.com)
 
 if [[ "$FINAL_URL" == *"$VALID_URL_SUFFIX"* ]]; then
     STATUS="✅ 目标区域达成 ($VALID_URL_SUFFIX)"
