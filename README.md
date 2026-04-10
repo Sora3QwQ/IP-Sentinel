@@ -8,7 +8,8 @@
 
 ## ✨ 核心极客特性
 
-* ☁️ **云端中枢 (Public Master)**：**v2.1.0 新特性**。引入官方公共机器人 [@OmniBeacon_bot](https://t.me/OmniBeacon_bot)，新手无需部署 Master 司令部，一键回车即可接入全球养护矩阵，极大降低入伍门槛。
+* 🗺️ **全球拓扑矩阵 (Global Nexus)**：**v3.0.0 新特性**。引入动态 `map.json` 索引中心与多级地理架构 (国家-省州-城市)。安装脚本全自动解析云端地图，支持无限扩展全球节点，真正实现“按图索骥”。
+* ☁️ **云端中枢 (Public Master)**：引入官方公共机器人 [@OmniBeacon_bot](https://t.me/OmniBeacon_bot)，新手无需部署 Master 司令部，一键回车即可接入全球养护矩阵，极大降低入伍门槛。
 * 🧠 **分布式中枢 (Master-Agent)**：对于硬核极客，支持私有化部署。一台 Master 主控集成 SQLite 数据库，统管无数台 Agent 边缘节点，确保数据绝对私有。
 * 🎮 **TG 战术面板 (Command Center)**：无需记忆繁琐命令，原生 Inline Keyboard 按钮驱动。支持一键调出节点列表、一键下发伪装指令、一键索要精准战报、**毫秒级抓取实时运行日志**。
 * 🛡️ **NAT 穿透与安全网关 (NAT-Friendly)**：边缘节点采用 Python3 极轻量 Webhook 监听，**完全自定义通信端口**，完美支持受限 NAT 小鸡。独创 TG 转发授权机制，杜绝野生节点恶意接入。
@@ -23,15 +24,16 @@
 📦 IP-Sentinel
  ┣ 📂 master/                 # 🧠 司令部：SQLite 存储、TG 监听与 Webhook 调度中心
  ┣ 📂 core/                   # 🛡️ 边缘哨兵：Webhook 被动监听、高拟真养护引擎
- ┗ 📂 data/                   # 🗂️ 全球数据规则库
-    ┣ 📂 regions/             # 🧊 冷数据：各地区 GPS 基准配置 (固化)
-    ┣ 📂 keywords/            # 🔥 热数据：动态搜索词库 (OTA 自动更新)
+ ┗ 📂 data/                   # 🗂️ 全球数据规则库 (v3.0 全新拓扑)
+    ┣ 📜 map.json             # 🌐 全球区域索引大脑 (Master Index)
+    ┣ 📂 regions/             # 🧊 冷数据：按 [国家/省州/城市] 深度细分的 LBS 锚点
+    ┣ 📂 keywords/            # 🔥 热数据：按国家归类的动态搜索词库 (OTA 自动更新)
     ┗ 📜 user_agents.txt      # 🔥 热数据：全局真实设备指纹池
 ```
 
 ## 🚀 极速部署 (Quick Start)
 
-v2.1.0 提供了两种接入模式，请根据您的战术需求选择：
+v3.0.0 提供了两种接入模式，请根据您的战术需求选择：
 
 ### 🔹 模式 A：官方公共模式 (最简、推荐)
 **适合不想折腾、只想快速养护 IP 的新兵。**
@@ -39,7 +41,8 @@ v2.1.0 提供了两种接入模式，请根据您的战术需求选择：
 1. **关注机器人**：在 TG 中关注 [@OmniBeacon_bot](https://t.me/OmniBeacon_bot) 并发送 `/start`。
 2. **部署 Agent**：在目标 VPS 上执行以下指令，安装过程中**直接回车**使用官方机器人，并输入您的 Chat ID：
 ```Bash
-   bash <(curl -sL https://raw.githubusercontent.com/hotyue/IP-Sentinel/main/core/install.sh)
+bash <(curl -sL https://raw.githubusercontent.com/hotyue/IP-Sentinel/main/core/install.sh)
+
 ```
 3. **激活节点**：安装完成后，您的手机会收到一条 #REGISTER# 暗号，将其转发给机器人即可完成入库。
 
@@ -50,10 +53,12 @@ v2.1.0 提供了两种接入模式，请根据您的战术需求选择：
 ```Bash
 bash <(curl -sL https://raw.githubusercontent.com/hotyue/IP-Sentinel/main/master/install_master.sh)
 
+
 ```
 2. **部署 Agent**：在需要养护的机器上执行 Agent 脚本，输入您自建机器人的 Token 以及与 Master 一致的配置。
 ```Bash
-   bash <(curl -sL https://raw.githubusercontent.com/hotyue/IP-Sentinel/main/core/install.sh)
+bash <(curl -sL https://raw.githubusercontent.com/hotyue/IP-Sentinel/main/core/install.sh)
+
 ```
 3. **激活节点**：同上，将暗号转发给您自己的机器人即可。
 
@@ -63,6 +68,7 @@ bash <(curl -sL https://raw.githubusercontent.com/hotyue/IP-Sentinel/main/master
 
 ```Bash
 bash /opt/ip_sentinel/core/uninstall.sh
+
 ```
 
 📡 战术联络 (Community)
@@ -71,8 +77,14 @@ bash /opt/ip_sentinel/core/uninstall.sh
 
 🤝 参与贡献
 如果你想为项目增加新的节点区域（例如德国、英国、新加坡等），或者提供更丰富的本土化搜索词库，非常欢迎提交 Pull Request！
-只需在 data/regions/ 新增对应国家的 JSON 规则，并在 data/keywords/ 新增词库 txt 即可。
+
+**v3.0 全球节点贡献规范：**
+1. 在 `data/regions/国家代码/省州代码/` 目录下新增对应城市的配置 `.json`。
+2. 在 `data/keywords/` 目录下新增或完善配套国家的词库 `kw_XX.txt`。
+3. **最重要的一步：** 在 `data/map.json` 中登记你的国家、省州与城市信息。安装脚本将自动读取地图，在全球雷达中点亮你的节点！
 
 ⚠️ 免责声明
 本项目仅供网络原理研究、个人 VPS 维护学习使用。请遵守当地法律法规及目标服务商的 TOS（服务条款），切勿用于恶意高频请求或任何非法用途。使用者需自行承担因不当使用造成的 IP 封禁或其他相关风险。
 
+## Stargazers over time
+[![Stargazers over time](https://starchart.cc/hotyue/IP-Sentinel.svg?variant=adaptive)](https://starchart.cc/hotyue/IP-Sentinel)
