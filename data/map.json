@@ -11,7 +11,8 @@
           "id": "CA",
           "name": "California (加州)",
           "cities": [
-            { "id": "Los_Angeles", "name": "Los Angeles (洛杉矶)" }
+            { "id": "Los_Angeles", "name": "Los Angeles (洛杉矶)" },
+            { "id": "San_Jose", "name": "San Jose (圣何塞)" }
           ]
         }
       ]
