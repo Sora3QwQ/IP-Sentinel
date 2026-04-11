@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==========================================================
-# 脚本名称: install.sh (IP-Sentinel 分布式边缘节点部署脚本 v3.0.0 - Global Nexus)
+# 脚本名称: install.sh (IP-Sentinel 分布式边缘节点部署脚本 v3.0.3 - Global Nexus)
 # 核心功能: 区域选择、模块按需开启、官方机器人一键配置
 # ==========================================================
 
@@ -157,8 +157,45 @@ if [[ "$TG_CHOICE" =~ ^[Yy]$ ]]; then
 
     echo -e "\033[33m💡 提示：如果您不知道自己的 Chat ID，可以关注 @userinfobot 获取。\033[0m"
     read -p "请输入你的 Chat ID (与主控一致): " CHAT_ID
-    read -p "请输入本机用于接收指令的 Webhook 端口 (默认 9527): " INPUT_PORT
-    [ -n "$INPUT_PORT" ] && AGENT_PORT="$INPUT_PORT"
+    
+    # ================== [v3.0.3 变更: 智能随机高位端口生成系统] ==================
+    echo -e "\n\033[36m[4.2/7] 正在构建 Webhook 安全通信隧道...\033[0m"
+    echo -n "🎲 正在探测可用随机端口..."
+    while true; do
+        RANDOM_PORT=$((RANDOM % 55536 + 10000))
+        # 同时兼容 ss (新) 和 netstat (旧) 检查端口占用
+        if ! (ss -tuln 2>/dev/null | grep -q ":$RANDOM_PORT " || netstat -tuln 2>/dev/null | grep -q ":$RANDOM_PORT "); then
+            break
+        fi
+        echo -n "."
+    done
+    echo -e " 完成！"
+    
+    echo -e "💡 系统为您生成的推荐随机高位端口为: \033[32m$RANDOM_PORT\033[0m"
+    echo -e "\033[33m(该端口已通过本地占用校验，可直接使用)\033[0m"
+    
+    while true; do
+        read -p "请输入 Webhook 监听端口 (回车采用推荐, 或手动输入): " INPUT_PORT
+        
+        if [ -z "$INPUT_PORT" ]; then
+            AGENT_PORT="$RANDOM_PORT"
+            break
+        else
+            # 校验手动输入的合法性与可用性
+            if [[ "$INPUT_PORT" =~ ^[0-9]+$ ]] && [ "$INPUT_PORT" -ge 1 ] && [ "$INPUT_PORT" -le 65535 ]; then
+                if (ss -tuln 2>/dev/null | grep -q ":$INPUT_PORT " || netstat -tuln 2>/dev/null | grep -q ":$INPUT_PORT "); then
+                    echo -e "\033[31m❌ 端口 $INPUT_PORT 已被占用，请重新输入或使用推荐端口。\033[0m"
+                else
+                    AGENT_PORT="$INPUT_PORT"
+                    break
+                fi
+            else
+                echo -e "\033[31m❌ 输入非法！端口范围应为 1-65535。\033[0m"
+            fi
+        fi
+    done
+    echo -e "✅ 已锁定 Webhook 通讯端口: \033[32m$AGENT_PORT\033[0m"
+    # ====================================================================
 fi
 
 # ================== [v3.0.1新增修改 1: 冗余网络栈探测与锚点锁定] ==================
@@ -345,7 +382,23 @@ echo "📍 你的本地守护区域已锁定为: $REGION_NAME"
 echo "⚙️ 哨兵现已开启 [每30分钟] 的高频高拟真养护循环。"
 if [[ -n "$TG_TOKEN" ]]; then
     echo "📡 Webhook 监听已启动 (端口: $AGENT_PORT) 并向中枢发送了注册请求。"
-    echo "⚠️ 请务必确保本机的防火墙放行了 TCP $AGENT_PORT 端口！"
+    
+    # ================== [v3.0.3 变更: 智能防火墙检测与放行指引] ==================
+    FW_MSG=""
+    if command -v ufw >/dev/null 2>&1 && ufw status | grep -qw active; then
+        FW_MSG="ufw allow $AGENT_PORT/tcp"
+    elif command -v firewall-cmd >/dev/null 2>&1 && systemctl is-active firewalld | grep -qw active; then
+        FW_MSG="firewall-cmd --zone=public --add-port=$AGENT_PORT/tcp --permanent && firewall-cmd --reload"
+    elif command -v iptables >/dev/null 2>&1; then
+        FW_MSG="iptables -I INPUT -p tcp --dport $AGENT_PORT -j ACCEPT"
+    fi
+    
+    echo -e "\033[33m⚠️ 警告：请务必确保本机及云服务商安全组放行了 TCP $AGENT_PORT 端口！\033[0m"
+    if [ -n "$FW_MSG" ]; then
+        echo "💡 检测到本地防火墙开启，您可以尝试执行以下命令放行："
+        echo -e "\033[36m   $FW_MSG\033[0m"
+    fi
+    # ====================================================================
 fi
-echo "🗑️ 若未来需卸载，可重新运行本脚本选择[3]或执行: bash ${INSTALL_DIR}/core/uninstall.sh"
+echo "🗑️ 若未来需卸载，可重新运行本脚本选择[2]或执行: bash ${INSTALL_DIR}/core/uninstall.sh"
 echo "========================================================"
