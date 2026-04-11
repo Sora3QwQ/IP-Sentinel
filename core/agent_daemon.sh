@@ -65,6 +65,7 @@ import os
 import html
 # ================== [v3.0.4 新增密码学与解析依赖] ==================
 import urllib.parse
+import urllib.request  # [修复] 提升至全局作用域，防止局部变量遮蔽
 import hmac
 import hashlib
 import time
@@ -167,9 +168,7 @@ class AgentHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("Content-type", "text/plain")
             self.end_headers()
             self.wfile.write(b"Action Accepted: fetch_log\n")
-            
-            import urllib.request
-            
+                        
             try:
                 config = {}
                 if os.path.exists('/opt/ip_sentinel/config.conf'):
