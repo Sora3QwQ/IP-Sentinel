@@ -360,6 +360,11 @@ if [[ -n "$TG_TOKEN" ]] && [[ -n "$CHAT_ID" ]]; then
     # 每天早上 8 点发送昨天的统计战报
     echo "0 8 * * * ${INSTALL_DIR}/core/tg_report.sh >/dev/null 2>&1" >> /tmp/cron_backup
     
+    # [v3.0.1新增修改 3: 删除原来的 curl 取 IP，直接使用我们上方锁定的 BIND_IP]
+    # 并提前写入 IP 缓存，彻底阻断 agent_daemon 首次启动时的重复推送
+    # [修复竞态]: 提前写入 IP 缓存，彻底阻断 agent_daemon 首次启动时的抢跑推送
+    echo "$BIND_IP" > "${INSTALL_DIR}/core/.last_ip"
+    
     # 双保险守护进程看门狗
     echo "@reboot nohup bash ${INSTALL_DIR}/core/agent_daemon.sh >/dev/null 2>&1 &" >> /tmp/cron_backup
     echo "* * * * * nohup bash ${INSTALL_DIR}/core/agent_daemon.sh >/dev/null 2>&1 &" >> /tmp/cron_backup
@@ -373,11 +378,7 @@ rm -f /tmp/cron_backup
 
 if [[ -n "$TG_TOKEN" ]] && [[ -n "$CHAT_ID" ]]; then
     echo -e "\n📡 正在向指挥部发送注册暗号..."
-    
-    # [v3.0.1新增修改 3: 删除原来的 curl 取 IP，直接使用我们上方锁定的 BIND_IP]
-    # 并提前写入 IP 缓存，彻底阻断 agent_daemon 首次启动时的重复推送
-    echo "$BIND_IP" > "${INSTALL_DIR}/core/.last_ip"
-    
+
 # 构造注册暗号 (使用带 [] 装甲的 BIND_IP，防止 Master 端解析错误)
     NODE_NAME=$(hostname | cut -c 1-15)
     REG_MSG="#REGISTER#|${NODE_NAME}|${BIND_IP}|${AGENT_PORT}"
