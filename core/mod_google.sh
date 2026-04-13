@@ -48,8 +48,8 @@ get_random_coord() {
 }
 
 # --- [环境初始化] ---
-# [v3.0.2修复] 直接读取系统已锁定的锚点 IP，彻底杜绝“获取IP失败”及隧道偏移
-CURRENT_IP="${BIND_IP:-Unknown}"
+# [v3.3.1修改] 优先读取对外公网面孔作为哈希种子，兼容 NAT 机的空 BIND_IP
+CURRENT_IP="${PUBLIC_IP:-${BIND_IP:-Unknown}}"
 
 # -----------------------------------------------------------
 # [V3.1.5] 哈希锚定法 (Hash-Seeded Persona) 
