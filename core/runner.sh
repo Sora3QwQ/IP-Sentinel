@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==========================================================
-# 脚本名称: runner.sh (IP-Sentinel 主控调度引擎 V2.0 智能分配版)
+# 脚本名称: runner.sh (IP-Sentinel 主控调度引擎 v3.4.0 版本锚点版)
 # 核心功能: 防并发延迟启动、功能开关(Feature Flag)自适应、多模块概率轮盘调度
 # ==========================================================
 
@@ -15,14 +15,18 @@ if [ ! -f "$CONFIG_FILE" ]; then
 fi
 source "$CONFIG_FILE"
 
-# 2. 全局日志写入函数 (导出给子进程共享使用)
+# 2. 全局日志写入函数 (导出给子进程共享使用，v3.4.0 引入版本探针)
 log() {
     local module=$1
     local level=$2
     local msg=$3
+    # [v3.4.0 核心] 提取当前配置中的版本锚点
+    local local_ver="${AGENT_VERSION:-未知}"
+    
     # 保证日志目录存在
     mkdir -p "${INSTALL_DIR}/logs"
-    printf "[$(date '+%Y-%m-%d %H:%M:%S')] [%-5s] [%-7s] [%s] %s\n" "$level" "$module" "$REGION_CODE" "$msg" >> "$LOG_FILE"
+    # 日志格式注入 [版本号] 追踪标识
+    printf "[$(date '+%Y-%m-%d %H:%M:%S')] [v%-5s] [%-5s] [%-7s] [%s] %s\n" "$local_ver" "$level" "$module" "$REGION_CODE" "$msg" >> "$LOG_FILE"
 }
 export -f log
 export CONFIG_FILE INSTALL_DIR
