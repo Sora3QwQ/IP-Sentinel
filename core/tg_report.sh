@@ -83,6 +83,9 @@ case "$REGION_CODE" in
     "SG") FLAG="🇸🇬" ;;
     "HK") FLAG="🇭🇰" ;;
     "GB"|"UK") FLAG="🇬🇧" ;;
+    "FR") FLAG="🇫🇷" ;;
+    "NL") FLAG="🇳🇱" ;;
+    "TR") FLAG="🇹🇷" ;;
     *) FLAG="🌐" ;;
 esac
 
